@@ -67,20 +67,16 @@ jobs:
       - name: Checkov (Terraform)
         uses: bridgecrewio/checkov-action@v12
         with:
+          docker_image: ghcr.io/bridgecrewio/checkov:3.2.544
           directory: .
           framework: terraform
-          quiet: true
           soft_fail: false
           output_format: sarif
           output_file_path: checkov.sarif
           download_external_modules: true
           var_file: envs/lab/terraform.tfvars
-          skip_path: |
-            osint/
-            policies/
-            scripts/
+          skip_path: '["osint/","policies/","scripts/"]'
           log_level: WARNING
-          container_user: 0
 
       - name: Upload Checkov SARIF to code scanning
         uses: github/codeql-action/upload-sarif@v3
