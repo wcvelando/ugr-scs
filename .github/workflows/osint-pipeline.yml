@@ -1,0 +1,37 @@
+name: OSINT Pipeline – Ethical (Scrape → Analyze → Watchlist CSV)
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "17 2 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  osint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Scrape (dataset mode)
+        run: python osint/scrape_osint.py --output data/osint/collected.jsonl --sample data/osint/sample_feed.json
+
+      - name: Analyze (Ollama if present, else fallback)
+        run: python osint/analyze_with_ollama.py --input data/osint/collected.jsonl --output data/osint/analysis.jsonl
+
+      - name: Prepare Watchlist CSV
+        run: python osint/prepare_watchlist.py --input data/osint/analysis.jsonl --output osint/osint_watchlist.csv
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osint-watchlist
+          path: |
+            data/osint/collected.jsonl
+            data/osint/analysis.jsonl
+            osint/osint_watchlist.csv

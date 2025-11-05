@@ -1,0 +1,17 @@
+[
+  {
+    "source": "example-blog-1",
+    "url": "https://security.example.com/post/apt29-tricks",
+    "text": "Researchers observed APT29 using new phishing infrastructure targeting cloud admins. Indicators include admin@contoso.example and 198.51.100.44."
+  },
+  {
+    "source": "advisory-vendor-x",
+    "url": "https://advisories.example.com/lazarus-crypto-heist",
+    "text": "Lazarus group reportedly shifted TTPs. Contact domains: auth-login.example.net, update-service.example.org."
+  },
+  {
+    "source": "threat-intel-weekly",
+    "url": "https://weekly.example.com/panda-campaigns",
+    "text": "Coverage of Panda activity and overlaps with Turla. Emails like report@sec.example.com observed."
+  }
+]

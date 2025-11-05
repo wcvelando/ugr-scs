@@ -1,0 +1,60 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityIncident\n| where TimeGenerated >= ago(24h)\n| summarize count() by Severity",
+        "chartSettings": {
+          "chartType": 2
+        },
+        "size": 1,
+        "title": "Incidents by Severity (24h)"
+      }
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityIncident\n| where TimeGenerated >= ago(24h)\n| summarize Incidents=count() by bin(TimeGenerated, 1h)\n| order by TimeGenerated asc",
+        "chartSettings": {
+          "chartType": 1
+        },
+        "size": 1,
+        "title": "Incidents over time (last 24h)"
+      }
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureActivity\n| where TimeGenerated >= ago(24h)\n| where OperationNameValue has \"delete\"\n| summarize Deletes=count() by bin(TimeGenerated, 30m)\n| order by TimeGenerated asc",
+        "chartSettings": {
+          "chartType": 1
+        },
+        "size": 1,
+        "title": "AzureActivity \u2013 Delete operations (24h)"
+      }
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let APTs = (_GetWatchlist('osint_apt_watchlist') | project SearchKey);\nAzureActivity\n| where TimeGenerated >= ago(24h)\n| where tostring(Caller) in~ (APTs)\n| project TimeGenerated, Caller, OperationNameValue, ResourceGroup\n| order by TimeGenerated desc",
+        "chartSettings": {
+          "chartType": 0
+        },
+        "size": 1,
+        "title": "Watchlist matches (APTs) in AzureActivity (24h)"
+      }
+    }
+  ],
+  "fallbackResourceIds": [],
+  "styleSettings": {
+    "isDarkTheme": false
+  },
+  "timeContext": {
+    "durationMs": 86400000
+  }
+}

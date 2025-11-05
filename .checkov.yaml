@@ -1,0 +1,10 @@
+framework: ["terraform"]
+download-external-modules: true
+evaluate-variables: true
+var-file:
+  - envs/lab/terraform.tfvars
+skip-path:
+  - osint/
+  - policies/
+  - scripts/
+secrets-scan: true

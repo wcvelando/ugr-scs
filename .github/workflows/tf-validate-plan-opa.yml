@@ -1,0 +1,71 @@
+name: Terraform CI – Validate, Plan, OPA & Checkov
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+jobs:
+  plan-opa-checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan (JSON)
+        run: |
+          terraform plan -out=tfplan.bin
+          terraform show -json tfplan.bin > tfplan.json
+
+      - name: Install Conftest
+        run: |
+          wget -q https://github.com/open-policy-agent/conftest/releases/download/v0.56.0/conftest_0.56.0_Linux_x86_64.tar.gz
+          tar xzf conftest_0.56.0_Linux_x86_64.tar.gz
+          sudo mv conftest /usr/local/bin/
+
+      - name: Run OPA Policies on tfplan.json
+        run: conftest test tfplan.json -p policies/terraform
+
+      - name: Checkov – Terraform static analysis
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          quiet: true
+          soft_fail: false
+          output_format: sarif
+          output_file_path: checkov.sarif
+          download_external_modules: true
+          var_file: envs/lab/terraform.tfvars
+          skip_paths: |
+            osint/
+            policies/
+            scripts/
+
+      - name: Upload Checkov SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov.sarif
