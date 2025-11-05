@@ -66,9 +66,9 @@ jobs:
 
       - name: Run Checkov (Docker)
         run: |
-          docker run --rm --pull always \
+          docker run --rm \
             -v "$PWD":/work -w /work \
-            bridgecrew/checkov:latest \
+            bridgecrew/checkov:3.2.490 \
             -d . \
             --framework terraform \
             --download-external-modules true \
