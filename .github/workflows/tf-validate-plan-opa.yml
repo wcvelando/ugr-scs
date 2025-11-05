@@ -64,7 +64,7 @@ jobs:
       - name: Run OPA Policies on tfplan.json
         run: conftest test tfplan.json -p policies/terraform -d policies/config.json
 
-      - name: Run tfsec
+      - name: Run tfsec (Docker, soft-fail)
         run: |
           docker run --rm --pull always \
             -v "$PWD":/src -w /src \
@@ -72,8 +72,9 @@ jobs:
             --force-all-dirs \
             --exclude-path osint/,policies/,scripts/ \
             --format sarif \
-            --out tfsec.sarif \
-            --soft-fail=false
+            --out - \
+            --soft-fail=true \
+          > tfsec.sarif
 
       - name: Upload SARIF (tfsec)
         uses: github/codeql-action/upload-sarif@v3
