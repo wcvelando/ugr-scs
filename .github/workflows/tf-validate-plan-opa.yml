@@ -64,24 +64,18 @@ jobs:
       - name: Run OPA Policies on tfplan.json
         run: conftest test tfplan.json -p policies/terraform -d policies/config.json
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install Checkov
-        run: pip install checkov
-
-      - name: Run Checkov
+      - name: Run tfsec (Docker)
         run: |
-          checkov -d . \
-            --framework terraform \
-            --download-external-modules true \
-            --var-file envs/lab/terraform.tfvars \
-            --skip-path osint/,policies/,scripts/ \
-            --output sarif --output-file-path checkov.sarif
+          docker run --rm --pull always \
+            -v "$PWD":/src -w /src \
+            aquasec/tfsec:latest \
+            --force-all-dirs \
+            --exclude-path osint/,policies/,scripts/ \
+            --format sarif \
+            --out tfsec.sarif \
+            --soft-fail=false
 
-      - name: Upload Checkov SARIF to code scanning
+      - name: Upload SARIF (tfsec)
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: checkov.sarif
+          sarif_file: tfsec.sarif
