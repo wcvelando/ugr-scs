@@ -69,12 +69,12 @@ jobs:
           docker run --rm --pull always \
             -v "$PWD":/work -w /work \
             bridgecrew/checkov:latest \
-            checkov -d . \
-              --framework terraform \
-              --download-external-modules true \
-              --var-file envs/lab/terraform.tfvars \
-              --skip-path osint/,policies/,scripts/ \
-              --output sarif --output-file-path checkov.sarif
+            -d . \
+            --framework terraform \
+            --download-external-modules true \
+            --var-file envs/lab/terraform.tfvars \
+            --skip-path osint/,policies/,scripts/ \
+            --output sarif --output-file-path checkov.sarif
 
       - name: Upload Checkov SARIF to code scanning
         uses: github/codeql-action/upload-sarif@v3
