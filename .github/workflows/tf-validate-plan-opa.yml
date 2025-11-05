@@ -64,20 +64,17 @@ jobs:
       - name: Run OPA Policies on tfplan.json
         run: conftest test tfplan.json -p policies/terraform -d policies/config.json
 
-      - name: Checkov (Terraform)
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          docker_image: ghcr.io/bridgecrewio/checkov:3.2.544
-          directory: .
-          framework: terraform
-          download_external_modules: true
-          var_file: envs/lab/terraform.tfvars
-          skip_path: '["osint/","policies/","scripts/"]'
-          output_format: sarif
-          output_file_path: checkov.sarif
-          soft_fail: false
-          skip_results_upload: true         
-          use_enforcement_rules: false  
+      - name: Install Checkov
+        run: pipx install checkov==3.2.544
+
+      - name: Run Checkov (Terraform)
+        run: |
+          checkov -d . \
+            --framework terraform \
+            --download-external-modules true \
+            --var-file envs/lab/terraform.tfvars \
+            --skip-path osint/,policies/,scripts/ \
+            --output sarif --output-file-path checkov.sarif
 
       - name: Upload Checkov SARIF to code scanning
         uses: github/codeql-action/upload-sarif@v3
