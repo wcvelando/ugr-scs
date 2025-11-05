@@ -3,7 +3,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 3.53.0"
+      version = ">= 4.51.0"
     }
   }
 }
@@ -11,4 +11,10 @@ terraform {
 provider "azurerm" {
   features {}
   use_oidc = true
+  default_tags {
+    tags = {
+      env   = "lab"
+      owner = var.owner
+    }
+  }
 }

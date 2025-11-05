@@ -62,7 +62,7 @@ jobs:
           sudo mv conftest /usr/local/bin/
 
       - name: Run OPA Policies on tfplan.json
-        run: conftest test tfplan.json -p policies/terraform
+        run: conftest test tfplan.json -p policies/terraform -d policies/config.json
 
       - name: Checkov – Terraform static analysis
         uses: bridgecrewio/checkov-action@v12
