@@ -64,7 +64,7 @@ jobs:
       - name: Run OPA Policies on tfplan.json
         run: conftest test tfplan.json -p policies/terraform -d policies/config.json
 
-      - name: Checkov – Terraform static analysis
+      - name: Checkov (Terraform)
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
@@ -79,6 +79,8 @@ jobs:
             osint/
             policies/
             scripts/
+          log_level: WARNING
+          container_user: 0
 
       - name: Upload Checkov SARIF to code scanning
         uses: github/codeql-action/upload-sarif@v3
