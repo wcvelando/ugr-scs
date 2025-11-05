@@ -12,7 +12,7 @@ locals {
 resource "azurerm_resource_group" "rg" {
   name     = local.rg_name
   location = var.location
-  tags     = merge(local.default_tags, {
+  tags = merge(local.default_tags, {
     # extras específicos si querés (p. ej. "service" = "sentinel-lab")
   })
 }
