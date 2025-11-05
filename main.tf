@@ -1,14 +1,20 @@
 locals {
+  default_tags = {
+    env   = "lab"
+    owner = var.owner
+  }
+}
+
+locals {
   rg_name = coalesce(var.resource_group_name, "${var.prefix}-rg")
 }
 
 resource "azurerm_resource_group" "rg" {
   name     = local.rg_name
   location = var.location
-  tags = {
-    env   = "lab"
-    owner = "students"
-  }
+  tags     = merge(local.default_tags, {
+    # extras específicos si querés (p. ej. "service" = "sentinel-lab")
+  })
 }
 
 resource "azurerm_log_analytics_workspace" "law" {
@@ -17,9 +23,7 @@ resource "azurerm_log_analytics_workspace" "law" {
   resource_group_name = azurerm_resource_group.rg.name
   sku                 = "PerGB2018"
   retention_in_days   = 30
-  tags = {
-    env = "lab"
-  }
+  tags                = merge(local.default_tags, {})
 }
 
 resource "azurerm_sentinel_log_analytics_workspace_onboarding" "sentinel" {

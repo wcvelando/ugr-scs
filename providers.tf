@@ -11,10 +11,4 @@ terraform {
 provider "azurerm" {
   features {}
   use_oidc = true
-  default_tags {
-    tags = {
-      env   = "lab"
-      owner = var.owner
-    }
-  }
 }
