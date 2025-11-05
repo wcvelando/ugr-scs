@@ -75,7 +75,7 @@ jobs:
           output_file_path: checkov.sarif
           download_external_modules: true
           var_file: envs/lab/terraform.tfvars
-          skip_paths: |
+          skip_path: |
             osint/
             policies/
             scripts/
