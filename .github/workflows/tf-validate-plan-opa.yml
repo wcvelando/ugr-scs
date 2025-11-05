@@ -70,13 +70,14 @@ jobs:
           docker_image: ghcr.io/bridgecrewio/checkov:3.2.544
           directory: .
           framework: terraform
-          soft_fail: false
-          output_format: sarif
-          output_file_path: checkov.sarif
           download_external_modules: true
           var_file: envs/lab/terraform.tfvars
           skip_path: '["osint/","policies/","scripts/"]'
-          log_level: WARNING
+          output_format: sarif
+          output_file_path: checkov.sarif
+          soft_fail: false
+          skip_results_upload: true         
+          use_enforcement_rules: false  
 
       - name: Upload Checkov SARIF to code scanning
         uses: github/codeql-action/upload-sarif@v3
