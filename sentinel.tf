@@ -16,5 +16,7 @@ AzureActivity
 | project TimeGenerated, OperationNameValue, ResourceGroup, Caller, ActivityStatusValue, CategoryValue
 KQL
 
-  incident_configuration { create_incident = true }
+  incident_configuration {
+    create_incident = true
+  }
 }
