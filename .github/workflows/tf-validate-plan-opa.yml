@@ -66,14 +66,16 @@ jobs:
 
       - name: Run tfsec (Docker)
         run: |
+          set -euo pipefail
           docker run --rm --pull always \
             -v "$PWD":/src -w /src \
             aquasec/tfsec:latest \
             --force-all-dirs \
             --exclude-path osint/,policies/,scripts/ \
             --format sarif \
-            --out tfsec.sarif \
-            --soft-fail=false
+            --out - \
+            --soft-fail=false \
+          > tfsec.sarif
 
       - name: Upload SARIF (tfsec)
         uses: github/codeql-action/upload-sarif@v3
