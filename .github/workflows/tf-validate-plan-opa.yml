@@ -64,16 +64,19 @@ jobs:
       - name: Run OPA Policies on tfplan.json
         run: conftest test tfplan.json -p policies/terraform -d policies/config.json
 
-      - name: Run Checkov (Docker)
+      - name: Run Checkov (Docker, stable tag)
         run: |
-          docker run --rm \
-            -v "$PWD":/work -w /work \
-            bridgecrew/checkov:3.2.490 \
+          set -e
+          IMAGE="bridgecrew/checkov:2.3.346"
+          docker run --rm --pull always \
+            -v "$PWD":/work -w /work "$IMAGE" \
             -d . \
             --framework terraform \
             --download-external-modules true \
             --var-file envs/lab/terraform.tfvars \
-            --skip-path osint/,policies/,scripts/ \
+            --skip-path osint/ \
+            --skip-path policies/ \
+            --skip-path scripts/ \
             --output sarif --output-file-path checkov.sarif
 
       - name: Upload Checkov SARIF to code scanning
