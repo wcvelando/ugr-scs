@@ -18,5 +18,11 @@ KQL
 
   incident_configuration {
     create_incident = true
+    grouping {
+      enabled                 = true
+      reopen_closed_incidents = false
+      lookback_duration       = "PT5M"
+      entity_matching_method  = "AnyAlert"
+    }
   }
 }

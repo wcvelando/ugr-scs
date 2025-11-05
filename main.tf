@@ -33,24 +33,11 @@ resource "azurerm_monitor_diagnostic_setting" "sub_activity_to_law" {
   target_resource_id         = data.azurerm_subscription.current.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
 
-  enabled_log {
-    category = "Administrative"
-  }
-  enabled_log {
-    category = "Policy"
-  }
-  enabled_log {
-    category = "Security"
-  }
-  enabled_log {
-    category = "ServiceHealth"
-  }
-  enabled_log {
-    category = "Alert"
-  }
+  enabled_log { category = "Administrative" }
+  enabled_log { category = "Policy" }
+  enabled_log { category = "Security" }
+  enabled_log { category = "ServiceHealth" }
+  enabled_log { category = "Alert" }
 
-  metric {
-    category = "AllMetrics"
-    enabled  = true
-  }
+  enabled_metric { category = "AllMetrics" }
 }
