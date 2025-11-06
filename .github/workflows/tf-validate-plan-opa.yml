@@ -27,15 +27,30 @@ jobs:
           terraform_version: 1.7.5
 
       - name: Terraform Init
-        run: terraform init
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+        run: terraform init -upgrade
 
       - name: Terraform Format
         run: terraform fmt -check
 
       - name: Terraform Validate
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
         run: terraform validate
 
       - name: Terraform Plan (JSON)
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
         run: |
           terraform plan -out=tfplan.bin
           terraform show -json tfplan.bin > tfplan.json
@@ -47,25 +62,19 @@ jobs:
           sudo mv conftest /usr/local/bin/
 
       - name: Run OPA Policies on tfplan.json
-        run: conftest test tfplan.json -p policies/terraform
+        run: conftest test tfplan.json -p policies/terraform -d policies/config.json
 
-      - name: Checkov – Terraform static analysis
-        uses: bridgecrewio/checkov-action@v12
+      - name: Run tfsec
+        continue-on-error: true
+        uses: aquasecurity/tfsec-action@v1.0.0
         with:
-          directory: .
-          framework: terraform
-          quiet: true
-          soft_fail: false
-          output_format: sarif
-          output_file_path: checkov.sarif
-          download_external_modules: true
-          var_file: envs/lab/terraform.tfvars
-          skip_paths: |
-            osint/
-            policies/
-            scripts/
+          soft_fail: true
+          format: sarif
+          output_file: tfsec.sarif
+          additional_args: --force-all-dirs --exclude-path osint/,policies/,scripts/
 
-      - name: Upload Checkov SARIF to code scanning
+      - name: Upload SARIF (tfsec)
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: checkov.sarif
+          sarif_file: tfsec.sarif

@@ -1,0 +1,6 @@
+{
+  "settings": {
+    "required_tags": ["env", "owner"],
+    "expected_owner": "students"
+  }
+}

@@ -1,2 +1,2 @@
-prefix  = "ugr-sec"
+prefix   = "ugr-scs"
 location = "eastus"
