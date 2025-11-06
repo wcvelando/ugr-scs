@@ -3,11 +3,6 @@ resource "time_sleep" "after_onboard" {
   create_duration = "120s"
 }
 
-resource "time_sleep" "wait_after_law" {
-  create_duration = "30s"
-  depends_on      = [azurerm_log_analytics_workspace.law]
-}
-
 resource "azurerm_sentinel_alert_rule_scheduled" "delete_ops" {
   name                       = "Detect-Resource-Delete"
   display_name               = "[UGR] Azure Resource Delete Detected"
