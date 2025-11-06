@@ -12,9 +12,7 @@ locals {
 resource "azurerm_resource_group" "rg" {
   name     = local.rg_name
   location = var.location
-  tags = merge(local.default_tags, {
-    # extras específicos si querés (p. ej. "service" = "sentinel-lab")
-  })
+  tags = merge(local.default_tags, {})
 }
 
 resource "azurerm_log_analytics_workspace" "law" {
@@ -30,6 +28,15 @@ resource "azurerm_sentinel_log_analytics_workspace_onboarding" "sentinel" {
   workspace_id = azurerm_log_analytics_workspace.law.id
 }
 
+# Espera corta para consistencia eventual (delete/recreate)
+resource "time_sleep" "wait_after_law" {
+  create_duration = "45s"
+  depends_on = [
+    azurerm_log_analytics_workspace.law,
+    azurerm_sentinel_log_analytics_workspace_onboarding.sentinel
+  ]
+}
+
 data "azurerm_subscription" "current" {}
 
 resource "azurerm_monitor_diagnostic_setting" "sub_activity_to_law" {
@@ -37,11 +44,21 @@ resource "azurerm_monitor_diagnostic_setting" "sub_activity_to_law" {
   target_resource_id         = data.azurerm_subscription.current.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
 
-  enabled_log { category = "Administrative" }
-  enabled_log { category = "Policy" }
-  enabled_log { category = "Security" }
-  enabled_log { category = "ServiceHealth" }
-  enabled_log { category = "Alert" }
+  # Ayuda a la resolución del destino en el provider
+  log_analytics_destination_type = "Dedicated"
 
-  enabled_metric { category = "AllMetrics" }
+  enabled_log   { category = "Administrative" }
+  enabled_log   { category = "Policy" }
+  enabled_log   { category = "Security" }
+  enabled_log   { category = "ServiceHealth" }
+  enabled_log   { category = "Alert" }
+  enabled_metric{ category = "AllMetrics" }
+
+  # Esperar explícitamente a la onboarding + sleep
+  depends_on = [ time_sleep.wait_after_law ]
+
+  timeouts {
+    create = "15m"
+    read   = "5m"
+  }
 }
