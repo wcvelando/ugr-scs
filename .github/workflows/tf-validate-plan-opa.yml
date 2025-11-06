@@ -26,13 +26,18 @@ jobs:
         with:
           terraform_version: 1.7.5
 
-      - name: Terraform Init
+      - name: Terraform init (remote backend)
         env:
           ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          ARM_USE_OIDC: true
-        run: terraform init -upgrade
+          ARM_USE_OIDC: true      
+        run: |
+          terraform init -upgrade \
+            -backend-config="resource_group_name=ugr-tfstate-rg" \
+            -backend-config="storage_account_name=${TF_SA}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=ugr-scs.tfstate"
 
       - name: Terraform Format
         run: terraform fmt -check
