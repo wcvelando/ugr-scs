@@ -1,0 +1,83 @@
+# .github/workflows/tf-destroy.yml
+name: Terraform Destroy – Safe (keep state)
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribe "DESTROY" para confirmar'
+        required: true
+        default: 'NO'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    if: ${{ github.event.inputs.confirm == 'DESTROY' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      # Solo descubrimos la SA y NO borramos nada del backend
+      - name: Discover TF state storage (read-only)
+        run: |
+          set -euo pipefail
+          SA=$(az storage account list -g ugr-tfstate-rg --query "[0].name" -o tsv)
+          if [ -z "$SA" ]; then
+            echo "No encuentro la SA del backend en 'ugr-tfstate-rg'. ¿Se creó con otro nombre de RG?"
+            exit 1
+          fi
+          echo "TF_SA=$SA" >> $GITHUB_ENV
+
+      - name: Terraform Init (remote backend)
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+        run: |
+          terraform init -upgrade \
+            -backend-config="resource_group_name=ugr-tfstate-rg" \
+            -backend-config="storage_account_name=${TF_SA}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=ugr-scs.tfstate"
+
+      # Import guard para que el DS de suscripción quede bajo TF y se destruya correctamente
+      - name: "Guard: import DS de suscripción si existe"
+        run: |
+          set -euo pipefail
+          SUB_ID="${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          NAME="activity-to-law"
+          TARGET="/subscriptions/${SUB_ID}"
+
+          if az monitor diagnostic-settings subscription show \
+               --subscription "$SUB_ID" \
+               --name "$NAME" >/dev/null 2>&1; then
+            echo "Importando '${NAME}' al state..."
+            terraform import azurerm_monitor_diagnostic_setting.sub_activity_to_law "${TARGET}|${NAME}" || true
+          else
+            echo "No existe '${NAME}' (ok)."
+          fi
+
+      - name: Terraform Destroy (auto-approve, keep backend)
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+        run: |
+          # Destruye recursos del lab; el backend y el blob de estado permanecen.
+          terraform destroy -auto-approve -lock-timeout=5m
