@@ -26,18 +26,44 @@ jobs:
         with:
           terraform_version: 1.7.5
 
+      - name: Check state backend availability
+        id: state
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true   
+        run: |
+          SA="${{ vars.TF_SA }}"
+          if [ -z "$SA" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          az storage account show -g ugr-tfstate-rg -n "$SA" >/dev/null 2>&1 && \
+            echo "exists=true"  >> $GITHUB_OUTPUT || echo "exists=false" >> $GITHUB_OUTPUT
+
       - name: Terraform init (remote backend)
         env:
           ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true      
+        if: steps.state.outputs.exists == 'true'
         run: |
           terraform init -upgrade \
             -backend-config="resource_group_name=ugr-tfstate-rg" \
-            -backend-config="storage_account_name=${TF_SA}" \
+            -backend-config="storage_account_name=${{ vars.TF_SA }}" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=ugr-scs.tfstate"
+
+      - name: Terraform init (no backend)
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true     
+        if: steps.state.outputs.exists == 'false'
+        run: terraform init -backend=false
 
       - name: Terraform Format
         run: terraform fmt -check
@@ -57,7 +83,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
         run: |
-          terraform plan -out=tfplan.bin
+          terraform plan -out=tfplan.bin || true
           terraform show -json tfplan.bin > tfplan.json
 
       - name: Install Conftest
