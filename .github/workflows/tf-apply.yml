@@ -25,13 +25,31 @@ jobs:
         with:
           terraform_version: 1.7.5
 
+      - name: Bootstrap TF state storage (idempotent)
+        run: |
+          az group create -n ugr-tfstate-rg -l eastus
+          # crea una SA si no existe (usa un sufijo aleatorio)
+          SA=$(az storage account list -g ugr-tfstate-rg --query "[0].name" -o tsv)
+          if [ -z "$SA" ]; then
+            az storage account create -n ugrtfstate$RANDOM -g ugr-tfstate-rg -l eastus --sku Standard_LRS
+            SA=$(az storage account list -g ugr-tfstate-rg --query "[0].name" -o tsv)
+          fi
+          # crea el contenedor tfstate si no existe (auth por login/OIDC)
+          az storage container create --account-name "$SA" --name tfstate --auth-mode login >/dev/null
+          echo "TF_SA=$SA" >> $GITHUB_ENV          
+
       - name: Terraform Init
         env:
           ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
-        run: terraform init -upgrade
+        run: |
+          terraform init -upgrade \
+            -backend-config="resource_group_name=ugr-tfstate-rg" \
+            -backend-config="storage_account_name=${TF_SA}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=ugr-scs.tfstate"
 
       - name: Terraform Apply (auto-approve)
         env:
@@ -39,4 +57,4 @@ jobs:
           ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan.bin
