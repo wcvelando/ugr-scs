@@ -69,11 +69,12 @@ jobs:
         uses: aquasecurity/tfsec-action@v1.0.0
         with:
           soft_fail: true
-          output_format: sarif
+          format: sarif
           output_file: tfsec.sarif
-          extra_args: --force-all-dirs --exclude-path osint/,policies/,scripts/
+          additional_args: --force-all-dirs --exclude-path osint/,policies/,scripts/
 
       - name: Upload SARIF (tfsec)
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: tfsec.sarif
