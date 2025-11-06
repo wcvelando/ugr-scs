@@ -12,7 +12,7 @@ locals {
 resource "azurerm_resource_group" "rg" {
   name     = local.rg_name
   location = var.location
-  tags = merge(local.default_tags, {})
+  tags     = merge(local.default_tags, {})
 }
 
 resource "azurerm_log_analytics_workspace" "law" {
@@ -47,15 +47,15 @@ resource "azurerm_monitor_diagnostic_setting" "sub_activity_to_law" {
   # Ayuda a la resolución del destino en el provider
   log_analytics_destination_type = "Dedicated"
 
-  enabled_log   { category = "Administrative" }
-  enabled_log   { category = "Policy" }
-  enabled_log   { category = "Security" }
-  enabled_log   { category = "ServiceHealth" }
-  enabled_log   { category = "Alert" }
-  enabled_metric{ category = "AllMetrics" }
+  enabled_log { category = "Administrative" }
+  enabled_log { category = "Policy" }
+  enabled_log { category = "Security" }
+  enabled_log { category = "ServiceHealth" }
+  enabled_log { category = "Alert" }
+  enabled_metric { category = "AllMetrics" }
 
   # Esperar explícitamente a la onboarding + sleep
-  depends_on = [ time_sleep.wait_after_law ]
+  depends_on = [time_sleep.wait_after_law]
 
   timeouts {
     create = "15m"
