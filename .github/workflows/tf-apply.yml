@@ -51,6 +51,16 @@ jobs:
             -backend-config="container_name=tfstate" \
             -backend-config="key=ugr-scs.tfstate"
 
+      - name: Terraform Plan (JSON)
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+        run: |
+          terraform plan -out=tfplan.bin
+          terraform show -json tfplan.bin > tfplan.json
+
       - name: Terraform Apply (auto-approve)
         env:
           ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
