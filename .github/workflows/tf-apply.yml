@@ -51,6 +51,23 @@ jobs:
             -backend-config="container_name=tfstate" \
             -backend-config="key=ugr-scs.tfstate"
 
+      - name: import Subscription Diagnostic Setting if exists
+        run: |
+          set -e
+          SUB_ID="${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          NAME="activity-to-law"
+          TARGET="/subscriptions/${SUB_ID}"
+
+          EXIST=$(az monitor diagnostic-settings list --resource "$TARGET" \
+            --query "value[?name=='${NAME}'] | length(@)" -o tsv)
+
+          if [ "${EXIST}" = "1" ]; then
+            echo "Importando '${NAME}' al state..."
+            terraform import azurerm_monitor_diagnostic_setting.sub_activity_to_law "${TARGET}|${NAME}" || true
+          else
+            echo "No existe '${NAME}'. Terraform lo creará."
+          fi
+
       - name: Terraform Plan (JSON)
         env:
           ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
