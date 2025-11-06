@@ -1,0 +1,111 @@
+name: Terraform Destroy – Manual
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribe "DESTROY" para confirmar'
+        required: true
+        default: "NO"
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    if: ${{ github.event.inputs.confirm == 'DESTROY' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      # Descubre/Inicializa el backend remoto (mismo que en apply)
+      - name: Bootstrap TF state storage (read-only / idempotente)
+        run: |
+          set -euo pipefail
+          az group create -n ugr-tfstate-rg -l eastus >/dev/null
+          SA=$(az storage account list -g ugr-tfstate-rg --query "[0].name" -o tsv)
+          if [ -z "$SA" ]; then
+            az storage account create -n ugrtfstate$RANDOM -g ugr-tfstate-rg -l eastus --sku Standard_LRS
+            SA=$(az storage account list -g ugr-tfstate-rg --query "[0].name" -o tsv)
+          fi
+          az storage container create --account-name "$SA" --name tfstate --auth-mode login >/dev/null
+          echo "TF_SA=$SA" >> $GITHUB_ENV
+
+      - name: Terraform Init (backend remoto)
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+        run: |
+          set -euo pipefail
+          terraform init -upgrade \
+            -backend-config="resource_group_name=ugr-tfstate-rg" \
+            -backend-config="storage_account_name=${TF_SA}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=ugr-scs.tfstate"
+
+      # Import guard por si el Diagnostic Setting existe pero no está en state
+      - name: "Guard: import Subscription Diagnostic Setting if exists"
+        run: |
+          set -euo pipefail
+          SUB_ID="${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          NAME="activity-to-law"
+          TARGET="/subscriptions/${SUB_ID}"
+
+          if az monitor diagnostic-settings subscription show \
+               --subscription "$SUB_ID" \
+               --name "$NAME" >/dev/null 2>&1; then
+            echo "Importando '${NAME}' al state..."
+            terraform import azurerm_monitor_diagnostic_setting.sub_activity_to_law "${TARGET}|${NAME}" || true
+          else
+            echo "No existe '${NAME}' en Azure (ok)."
+          fi
+
+      - name: Terraform Destroy (auto-approve)
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+        run: |
+          set -euo pipefail
+          terraform destroy -auto-approve
+
+      # --- Opcional: limpieza total de state + recursos de soporte ---
+      - name: Post-clean (Nuke opcional)
+        if: ${{ success() }}
+        run: |
+          set -euo pipefail
+          SUB_ID="${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          NAME="activity-to-law"
+
+          echo "Intentando borrar Diagnostic Setting remanente (por si quedó)..."
+          az monitor diagnostic-settings subscription delete \
+            --subscription "$SUB_ID" \
+            --name "$NAME" || true
+
+          echo "Borrando blob de tfstate (si existe)..."
+          SA="${TF_SA}"
+          az storage blob delete --auth-mode login \
+            --account-name "$SA" \
+            --container-name tfstate \
+            --name ugr-scs.tfstate || true
+
+          echo "OPCIONAL: Borrar storage account del tfstate y RG de tfstate"
+          # Descomentar si querés también borrar el backend del state
+          # az group delete -n ugr-tfstate-rg --yes --no-wait || true
+
+          echo "Borrado completado."
