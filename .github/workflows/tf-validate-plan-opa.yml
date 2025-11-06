@@ -70,11 +70,16 @@ jobs:
         with:
           soft_fail: true
           format: sarif
-          output_file: tfsec.sarif
           additional_args: --force-all-dirs --exclude-path osint/,policies/,scripts/
+          working_directory: .
+
+      - name: Capture tfsec output to file
+        if: always()
+        run: |
+          tfsec --format=sarif --soft-fail --force-all-dirs --exclude-path osint/,policies/,scripts/ . > tfsec.sarif
 
       - name: Upload SARIF (tfsec)
-        continue-on-error: true
+        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: tfsec.sarif
