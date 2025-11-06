@@ -2,10 +2,15 @@ name: Terraform CD – Apply on main
 on:
   push:
     branches: [ main ]
+  workflow_dispatch: {}
 
 permissions:
   id-token: write
   contents: read
+
+concurrency:
+  group: tf-apply-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   apply:
@@ -84,4 +89,6 @@ jobs:
           ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
-        run: terraform apply -auto-approve tfplan.bin
+        run: |
+          set -euo pipefail
+          terraform apply -auto-approve tfplan.bin

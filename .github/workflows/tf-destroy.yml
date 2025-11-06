@@ -55,21 +55,21 @@ jobs:
             -backend-config="container_name=tfstate" \
             -backend-config="key=ugr-scs.tfstate"
 
-      # Import guard para que el DS de suscripción quede bajo TF y se destruya correctamente
-      - name: "Guard: import DS de suscripción si existe"
+      - name: import Subscription Diagnostic Setting if exists
         run: |
-          set -euo pipefail
+          set -e
           SUB_ID="${{ vars.AZURE_SUBSCRIPTION_ID }}"
           NAME="activity-to-law"
           TARGET="/subscriptions/${SUB_ID}"
 
+          # Si existe el Diagnostic Setting a nivel suscripción, importarlo al state
           if az monitor diagnostic-settings subscription show \
-               --subscription "$SUB_ID" \
-               --name "$NAME" >/dev/null 2>&1; then
+              --subscription "$SUB_ID" \
+              --name "$NAME" >/dev/null 2>&1; then
             echo "Importando '${NAME}' al state..."
             terraform import azurerm_monitor_diagnostic_setting.sub_activity_to_law "${TARGET}|${NAME}" || true
           else
-            echo "No existe '${NAME}' (ok)."
+            echo "No existe '${NAME}'. Terraform lo creará."
           fi
 
       - name: Terraform Destroy (auto-approve, keep backend)
