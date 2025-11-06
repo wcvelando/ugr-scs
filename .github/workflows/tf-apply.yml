@@ -56,14 +56,15 @@ jobs:
           set -e
           SUB_ID="${{ vars.AZURE_SUBSCRIPTION_ID }}"
           NAME="activity-to-law"
-          TARGET="/subscriptions/${SUB_ID}"
 
-          EXIST=$(az monitor diagnostic-settings list --resource "$TARGET" \
-            --query "value[?name=='${NAME}'] | length(@)" -o tsv)
+          # Lista DS a nivel suscripción (array plano)
+          COUNT=$(az monitor diagnostic-settings subscription list \
+            --subscription "$SUB_ID" \
+            --query "[?name=='${NAME}'] | length(@)" -o tsv)
 
-          if [ "${EXIST}" = "1" ]; then
+          if [ "$COUNT" = "1" ]; then
             echo "Importando '${NAME}' al state..."
-            terraform import azurerm_monitor_diagnostic_setting.sub_activity_to_law "${TARGET}|${NAME}" || true
+            terraform import azurerm_monitor_diagnostic_setting.sub_activity_to_law "/subscriptions/${SUB_ID}|${NAME}" || true
           else
             echo "No existe '${NAME}'. Terraform lo creará."
           fi
