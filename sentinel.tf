@@ -1,3 +1,8 @@
+resource "azurerm_sentinel_log_analytics_workspace_onboarding" "sentinel" {
+  workspace_id                 = azurerm_log_analytics_workspace.law.id
+  customer_managed_key_enabled = false
+}
+
 resource "azurerm_sentinel_alert_rule_scheduled" "delete_ops" {
   name                       = "Detect-Resource-Delete"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
@@ -15,4 +20,9 @@ AzureActivity
 | where OperationNameValue has "delete"
 | project TimeGenerated, OperationNameValue, ResourceGroup, Caller, ActivityStatusValue, CategoryValue
 KQL
+
+  # 👇 fuerza orden correcto
+  depends_on = [
+    azurerm_sentinel_log_analytics_workspace_onboarding.sentinel
+  ]
 }
